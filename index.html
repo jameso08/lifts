@@ -1,0 +1,412 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#000000">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Lifts">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-180.png">
+<title>Lifts</title>
+<style>
+  :root {
+    --bg: #000;
+    --card: #0d0d0d;
+    --line: #222;
+    --btn: #171717;
+    --btn-active: #2e2e2e;
+    --text: #fff;
+    --muted: #8a8a8a;
+    --dim: #555;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); }
+  body {
+    font: 16px/1.35 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -webkit-user-select: none; user-select: none;
+    touch-action: manipulation;
+    overscroll-behavior-y: none;
+  }
+  button, input { font: inherit; color: inherit; }
+  button { background: none; border: 0; padding: 0; cursor: pointer; touch-action: manipulation; }
+  #app {
+    max-width: 520px; margin: 0 auto; min-height: 100dvh;
+    padding: calc(env(safe-area-inset-top) + 12px) 16px calc(env(safe-area-inset-bottom) + 112px);
+  }
+
+  /* top bar */
+  .bar { display: flex; align-items: center; justify-content: space-between; min-height: 44px; }
+  .bar button { color: var(--muted); font-size: 16px; min-height: 44px; padding: 0 4px; }
+  .bar button.strong { color: var(--text); font-weight: 600; }
+  .bar button:disabled { color: var(--dim); }
+
+  h1 { font-size: 40px; font-weight: 700; letter-spacing: -0.03em; margin: 12px 0 2px; line-height: 1.05; }
+  .sub { color: var(--muted); font-size: 15px; margin: 0 0 24px; }
+
+  /* home list */
+  .row {
+    display: flex; align-items: center; gap: 12px; width: 100%; text-align: left;
+    padding: 16px 0; border-bottom: 1px solid var(--line);
+  }
+  .row:active { opacity: .6; }
+  .row .main { flex: 1; min-width: 0; }
+  .row .t { font-size: 18px; font-weight: 600; letter-spacing: -0.01em; }
+  .row .t span { color: var(--muted); font-weight: 400; margin-left: 8px; font-size: 15px; }
+  .row .s { color: var(--muted); font-size: 14px; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .row .chev { color: var(--dim); font-size: 22px; }
+  .empty { color: var(--dim); text-align: center; padding: 72px 24px; font-size: 15px; }
+
+  .foot { display: flex; justify-content: center; gap: 28px; margin-top: 36px; }
+  .foot button { color: var(--dim); font-size: 13px; letter-spacing: .08em; text-transform: uppercase; min-height: 44px; }
+
+  /* primary action pinned to bottom */
+  .dock {
+    position: fixed; left: 0; right: 0; bottom: 0;
+    padding: 20px 16px calc(env(safe-area-inset-bottom) + 16px);
+    background: linear-gradient(to top, #000 62%, transparent);
+    pointer-events: none;
+  }
+  .dock button {
+    pointer-events: auto; display: block; width: 100%; max-width: 488px; margin: 0 auto;
+    height: 56px; border-radius: 16px; background: var(--text); color: #000;
+    font-size: 17px; font-weight: 600;
+  }
+  .dock button:active { background: #cfcfcf; }
+
+  /* day title with native date picker laid over it */
+  .title { position: relative; display: inline-block; }
+  .title input {
+    position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0;
+    -webkit-appearance: none; appearance: none; border: 0;
+  }
+
+  /* exercise card */
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 14px 14px 16px; margin-bottom: 12px; }
+  .card .head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .card .name {
+    flex: 1; min-width: 0; background: none; border: 0; outline: 0; padding: 6px 2px;
+    font-size: 19px; font-weight: 600; letter-spacing: -0.01em; border-radius: 0;
+    -webkit-user-select: text; user-select: text;
+  }
+  .card .x { color: var(--dim); font-size: 13px; min-width: 44px; min-height: 36px; text-align: right; padding-right: 2px; }
+  .card .x.arm { color: var(--text); font-weight: 600; }
+
+  .label { color: var(--muted); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; margin: 0 2px 6px; }
+  .label i { font-style: normal; color: var(--dim); text-transform: none; letter-spacing: 0; margin-left: 6px; }
+
+  .step {
+    height: 48px; min-width: 48px; padding: 0 6px; border-radius: 12px; background: var(--btn);
+    font-size: 16px; font-weight: 500; font-variant-numeric: tabular-nums; flex: none;
+  }
+  .step.sm { color: var(--muted); font-size: 15px; }
+  .step:active { background: var(--btn-active); }
+
+  .weight { display: flex; align-items: center; gap: 6px; margin-bottom: 14px; }
+  .weight .val { flex: 1; min-width: 0; display: flex; align-items: baseline; justify-content: center; gap: 4px; }
+  .weight input {
+    width: 3.4ch; min-width: 0; background: none; border: 0; outline: 0; padding: 0; text-align: right;
+    font-size: 30px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums;
+    -webkit-user-select: text; user-select: text; border-radius: 0;
+  }
+  .weight .unit { color: var(--muted); font-size: 14px; }
+
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .count { display: flex; align-items: center; gap: 6px; }
+  .count .num { flex: 1; text-align: center; font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .count .num.off { color: var(--dim); font-weight: 400; }
+
+  .add {
+    width: 100%; height: 56px; border-radius: 20px; border: 1px dashed #333;
+    color: var(--muted); font-size: 16px;
+  }
+  .add:active { background: var(--card); }
+
+  /* add-exercise screen */
+  .field {
+    width: 100%; height: 56px; border-radius: 16px; background: var(--card); border: 1px solid var(--line);
+    padding: 0 16px; font-size: 18px; outline: 0; margin: 12px 0 8px;
+    -webkit-user-select: text; user-select: text; -webkit-appearance: none; appearance: none;
+  }
+  .field:focus { border-color: #555; }
+  .field::placeholder { color: var(--dim); }
+  .sug { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; width: 100%; text-align: left; padding: 15px 4px; border-bottom: 1px solid var(--line); font-size: 17px; }
+  .sug:active { opacity: .6; }
+  .sug span { color: var(--muted); font-size: 14px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+(() => {
+  const KEY = 'lifts.v1';
+  const app = document.getElementById('app');
+  let db = load();
+  let view = { name: 'home' };
+
+  // ---------- storage ----------
+  function load() {
+    try {
+      const d = JSON.parse(localStorage.getItem(KEY));
+      if (d && Array.isArray(d.days)) return d;
+    } catch (e) {}
+    return { days: [] };
+  }
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(db)); } catch (e) {}
+  }
+  if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+
+  // ---------- helpers ----------
+  const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  const pad = n => String(n).padStart(2, '0');
+  const today = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
+  const toDate = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+  const weekday = s => s === today() ? 'Today' : toDate(s).toLocaleDateString('en-US', { weekday: 'long' });
+  const longDate = s => toDate(s).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  const fmtW = w => String(Math.round(w * 100) / 100);
+  const sortedDays = () => [...db.days].sort((a, b) => b.date.localeCompare(a.date));
+
+  function h(tag, props, ...kids) {
+    const e = document.createElement(tag);
+    for (const [k, v] of Object.entries(props || {})) {
+      if (v == null || v === false) continue;
+      if (k === 'class') e.className = v;
+      else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+      else if (k === 'value') e.value = v;
+      else e.setAttribute(k, v === true ? '' : v);
+    }
+    for (const c of kids.flat()) {
+      if (c == null || c === false) continue;
+      e.append(c.nodeType ? c : document.createTextNode(c));
+    }
+    return e;
+  }
+
+  // Most recent logged values for an exercise name, used to prefill.
+  function lastUse(name) {
+    const n = name.trim().toLowerCase();
+    for (const d of sortedDays())
+      for (let i = d.exercises.length - 1; i >= 0; i--)
+        if (d.exercises[i].name.trim().toLowerCase() === n) return d.exercises[i];
+    return null;
+  }
+  // Unique exercise names, most recently used first.
+  function knownNames() {
+    const seen = new Set(), out = [];
+    for (const d of sortedDays())
+      for (const x of d.exercises) {
+        const k = x.name.trim().toLowerCase();
+        if (k && !seen.has(k)) { seen.add(k); out.push(x.name.trim()); }
+      }
+    return out;
+  }
+
+  function go(v) { view = v; render(); window.scrollTo(0, 0); }
+  function render() {
+    app.replaceChildren(...(view.name === 'home' ? home() : view.name === 'day' ? day() : picker()));
+  }
+
+  // ---------- home ----------
+  function home() {
+    const days = sortedDays();
+    const list = days.length
+      ? days.map(d => h('button', { class: 'row', onclick: () => go({ name: 'day', id: d.id }) },
+          h('div', { class: 'main' },
+            h('div', { class: 't' }, weekday(d.date), h('span', {}, longDate(d.date))),
+            h('div', { class: 's' }, d.exercises.map(x => x.name).join(' · ') || 'No exercises')),
+          h('div', { class: 'chev' }, '›')))
+      : h('div', { class: 'empty' }, 'No entries yet. Log today to start.');
+
+    const file = h('input', { type: 'file', accept: 'application/json,.json', style: 'display:none', onchange: importData });
+    return [
+      h('div', { class: 'bar' }),
+      h('h1', {}, 'Lifts'),
+      h('p', { class: 'sub' }, days.length === 1 ? '1 entry' : `${days.length} entries`),
+      h('div', {}, list),
+      h('div', { class: 'foot' },
+        h('button', { onclick: exportData }, 'Export'),
+        h('button', { onclick: () => file.click() }, 'Import'),
+        file),
+      h('div', { class: 'dock' }, h('button', { onclick: openToday }, 'Log today')),
+    ];
+  }
+
+  function openToday() {
+    let d = db.days.find(x => x.date === today());
+    if (!d) { d = { id: uid(), date: today(), exercises: [] }; db.days.push(d); save(); }
+    go({ name: 'day', id: d.id });
+  }
+
+  // ---------- day ----------
+  function day() {
+    const d = db.days.find(x => x.id === view.id);
+    if (!d) { view = { name: 'home' }; return home(); }
+
+    const back = () => {
+      if (!d.exercises.length) { db.days = db.days.filter(x => x !== d); save(); }
+      go({ name: 'home' });
+    };
+    const del = armed(btn => {
+      db.days = db.days.filter(x => x !== d); save(); go({ name: 'home' });
+    }, 'Delete day', 'Tap again to delete');
+
+    const dateInput = h('input', { type: 'date', value: d.date, 'aria-label': 'Change date', onchange: e => {
+      if (!e.target.value) return;
+      d.date = e.target.value; save(); render();
+    } });
+
+    return [
+      h('div', { class: 'bar' }, h('button', { onclick: back }, '‹ Entries'), del),
+      h('div', { class: 'title' }, h('h1', {}, weekday(d.date)), dateInput),
+      h('p', { class: 'sub' }, longDate(d.date)),
+      ...d.exercises.map(x => card(d, x)),
+      h('button', { class: 'add', onclick: () => go({ name: 'pick', id: d.id }) }, '+ Add exercise'),
+    ];
+  }
+
+  // A button that needs a second tap within 3s to fire.
+  function armed(fn, label, confirmLabel, cls) {
+    let timer = null;
+    const b = h('button', { class: cls || '' }, label);
+    b.addEventListener('click', () => {
+      if (timer) { clearTimeout(timer); fn(b); return; }
+      b.textContent = confirmLabel; b.classList.add('arm', 'strong');
+      timer = setTimeout(() => { timer = null; b.textContent = label; b.classList.remove('arm', 'strong'); }, 3000);
+    });
+    return b;
+  }
+
+  function card(d, x) {
+    const el = h('div', { class: 'card' });
+
+    // weight
+    const wIn = h('input', { type: 'text', inputmode: 'decimal', value: fmtW(x.weight), 'aria-label': 'Weight in pounds' });
+    const fit = () => { wIn.style.width = Math.max(2, wIn.value.length) + 0.4 + 'ch'; };
+    const setW = w => { x.weight = Math.max(0, Math.round(w * 100) / 100); wIn.value = fmtW(x.weight); fit(); save(); };
+    wIn.addEventListener('focus', () => wIn.select());
+    wIn.addEventListener('input', fit);
+    wIn.addEventListener('change', () => { const v = parseFloat(wIn.value.replace(',', '.')); setW(isFinite(v) ? v : x.weight); });
+    wIn.addEventListener('keydown', e => { if (e.key === 'Enter') wIn.blur(); });
+    fit();
+    const wb = (delta, sm) => h('button', { class: 'step' + (sm ? ' sm' : ''), 'aria-label': `${delta > 0 ? 'Add' : 'Subtract'} ${Math.abs(delta)} pounds`,
+      onclick: () => setW(x.weight + delta) }, (delta > 0 ? '+' : '−') + Math.abs(delta));
+
+    // reps
+    const rNum = h('div', { class: 'num' }, String(x.reps));
+    const setR = r => { x.reps = Math.max(0, r); rNum.textContent = x.reps; save(); };
+
+    // reps in reserve: null means not recorded
+    const iNum = h('div', { class: 'num' });
+    const showI = () => { iNum.textContent = x.rir == null ? '–' : x.rir; iNum.classList.toggle('off', x.rir == null); };
+    const setI = dir => {
+      if (x.rir == null) x.rir = dir > 0 ? 0 : null;
+      else if (x.rir + dir < 0) x.rir = null;
+      else x.rir = Math.min(10, x.rir + dir);
+      showI(); save();
+    };
+    showI();
+
+    const name = h('input', { class: 'name', type: 'text', value: x.name, 'aria-label': 'Exercise name', autocapitalize: 'words', autocomplete: 'off', enterkeyhint: 'done' });
+    name.addEventListener('change', () => { const v = name.value.trim(); if (v) x.name = v; name.value = x.name; save(); });
+    name.addEventListener('keydown', e => { if (e.key === 'Enter') name.blur(); });
+
+    const remove = armed(() => { d.exercises = d.exercises.filter(e => e !== x); save(); el.remove(); }, 'Remove', 'Sure?', 'x');
+
+    el.append(
+      h('div', { class: 'head' }, name, remove),
+      h('div', { class: 'label' }, 'Weight'),
+      h('div', { class: 'weight' }, wb(-5), wb(-2.5, true),
+        h('div', { class: 'val' }, wIn, h('span', { class: 'unit' }, 'lb')),
+        wb(2.5, true), wb(5)),
+      h('div', { class: 'pair' },
+        h('div', {}, h('div', { class: 'label' }, 'Reps'),
+          h('div', { class: 'count' },
+            h('button', { class: 'step', 'aria-label': 'One fewer rep', onclick: () => setR(x.reps - 1) }, '−'), rNum,
+            h('button', { class: 'step', 'aria-label': 'One more rep', onclick: () => setR(x.reps + 1) }, '+'))),
+        h('div', {}, h('div', { class: 'label' }, 'In reserve', h('i', {}, 'optional')),
+          h('div', { class: 'count' },
+            h('button', { class: 'step', 'aria-label': 'One fewer rep in reserve', onclick: () => setI(-1) }, '−'), iNum,
+            h('button', { class: 'step', 'aria-label': 'One more rep in reserve', onclick: () => setI(1) }, '+')))));
+    return el;
+  }
+
+  // ---------- add exercise ----------
+  function picker() {
+    const d = db.days.find(x => x.id === view.id);
+    if (!d) { view = { name: 'home' }; return home(); }
+    const names = knownNames();
+    const list = h('div', {});
+    const addBtn = h('button', { class: 'strong', disabled: true, onclick: () => add(input.value) }, 'Add');
+    const input = h('input', { class: 'field', type: 'text', placeholder: 'Exercise name', autocapitalize: 'words', autocomplete: 'off', autocorrect: 'off', enterkeyhint: 'done', 'aria-label': 'Exercise name' });
+
+    function add(raw) {
+      const name = raw.trim();
+      if (!name) return;
+      const prev = lastUse(name);
+      d.exercises.push({ id: uid(), name: prev ? prev.name.trim() : name, weight: prev ? prev.weight : 45, reps: prev ? prev.reps : 8, rir: null });
+      save();
+      go({ name: 'day', id: d.id });
+      window.scrollTo(0, document.body.scrollHeight);
+    }
+    function fill() {
+      const q = input.value.trim().toLowerCase();
+      addBtn.disabled = !q;
+      list.replaceChildren(...names.filter(n => n.toLowerCase().includes(q)).map(n => {
+        const p = lastUse(n);
+        return h('button', { class: 'sug', onclick: () => add(n) }, n, h('span', {}, `${fmtW(p.weight)} lb × ${p.reps}`));
+      }));
+    }
+    input.addEventListener('input', fill);
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') add(input.value); });
+    fill();
+    setTimeout(() => input.focus(), 0);
+
+    return [
+      h('div', { class: 'bar' }, h('button', { onclick: () => go({ name: 'day', id: d.id }) }, 'Cancel'), addBtn),
+      input, list,
+    ];
+  }
+
+  // ---------- backup ----------
+  async function exportData() {
+    const name = `lifts-${today()}.json`;
+    const blob = new Blob([JSON.stringify(db, null, 2)], { type: 'application/json' });
+    try {
+      const f = new File([blob], name, { type: 'application/json' });
+      if (navigator.canShare && navigator.canShare({ files: [f] })) { await navigator.share({ files: [f] }); return; }
+    } catch (e) { if (e && e.name === 'AbortError') return; }
+    const a = h('a', { href: URL.createObjectURL(blob), download: name });
+    document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+
+  async function importData(e) {
+    const f = e.target.files[0];
+    e.target.value = '';
+    if (!f) return;
+    try {
+      const d = JSON.parse(await f.text());
+      if (!d || !Array.isArray(d.days)) throw 0;
+      const days = d.days.filter(x => x && /^\d{4}-\d{2}-\d{2}$/.test(x.date) && Array.isArray(x.exercises)).map(x => ({
+        id: String(x.id || uid()), date: x.date,
+        exercises: x.exercises.filter(y => y && typeof y.name === 'string').map(y => ({
+          id: String(y.id || uid()), name: y.name, weight: Math.max(0, +y.weight || 0), reps: Math.max(0, Math.round(+y.reps || 0)),
+          rir: y.rir == null || !isFinite(+y.rir) ? null : Math.max(0, Math.round(+y.rir)),
+        })),
+      }));
+      if (db.days.length && !confirm(`Replace your ${db.days.length} entries with the ${days.length} in this file?`)) return;
+      db = { days }; save(); render();
+    } catch (err) { alert('That file is not a Lifts backup.'); }
+  }
+
+  render();
+  if ('serviceWorker' in navigator && location.protocol !== 'file:') navigator.serviceWorker.register('sw.js').catch(() => {});
+})();
+</script>
+</body>
+</html>
