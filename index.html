@@ -102,6 +102,17 @@
   .filtering .grip { display: none; }
   .field.search { height: 44px; font-size: 16px; border-radius: 12px; margin: 0 0 14px; padding: 0 14px; }
 
+  /* collapsed card: one line with name, weight and reps(rir) */
+  .card:not(.open) { padding: 4px 14px; }
+  .card:not(.open) .head { margin-bottom: 0; min-height: 44px; cursor: pointer; }
+  .card:not(.open) .name { pointer-events: none; font-size: 17px; text-overflow: ellipsis; }
+  .card:not(.open) .x, .card:not(.open) .body, .card.open .sum { display: none; }
+  .card .sum { display: flex; align-items: baseline; gap: 12px; flex: none; white-space: nowrap; font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .card .sum small { color: var(--muted); font-size: 12px; font-weight: 400; }
+  .card .sum .r { color: var(--muted); min-width: 3.4ch; text-align: right; }
+  .card .tog { color: var(--dim); font-size: 22px; line-height: 1; min-width: 28px; min-height: 40px; flex: none; transform: rotate(90deg); transition: transform .15s; }
+  .card.open .tog { transform: rotate(-90deg); }
+
   .label { color: var(--muted); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; margin: 0 2px 6px; }
   .label i { font-style: normal; color: var(--dim); text-transform: none; letter-spacing: 0; margin-left: 6px; }
 
@@ -345,7 +356,7 @@
     // weight
     const wIn = h('input', { type: 'text', inputmode: 'decimal', value: fmtW(x.weight), 'aria-label': 'Weight in pounds' });
     const fit = () => { wIn.style.width = Math.max(2, wIn.value.length) + 0.4 + 'ch'; };
-    const setW = w => { x.weight = Math.max(0, Math.round(w * 100) / 100); wIn.value = fmtW(x.weight); fit(); save(); };
+    const setW = w => { x.weight = Math.max(0, Math.round(w * 100) / 100); wIn.value = fmtW(x.weight); fit(); save(); showSum(); };
     wIn.addEventListener('focus', () => wIn.select());
     wIn.addEventListener('input', fit);
     wIn.addEventListener('change', () => { const v = parseFloat(wIn.value.replace(',', '.')); setW(isFinite(v) ? v : x.weight); });
@@ -356,7 +367,7 @@
 
     // reps
     const rNum = h('div', { class: 'num' }, String(x.reps));
-    const setR = r => { x.reps = Math.max(0, r); rNum.textContent = x.reps; save(); };
+    const setR = r => { x.reps = Math.max(0, r); rNum.textContent = x.reps; save(); showSum(); };
 
     // reps in reserve: null means not recorded
     const iNum = h('div', { class: 'num' });
@@ -365,7 +376,7 @@
       if (x.rir == null) x.rir = dir > 0 ? 0 : null;
       else if (x.rir + dir < 0) x.rir = null;
       else x.rir = Math.min(10, x.rir + dir);
-      showI(); save();
+      showI(); save(); showSum();
     };
     showI();
 
@@ -375,8 +386,27 @@
 
     const remove = armed(() => { d.exercises = d.exercises.filter(e => e !== x); save(); el.remove(); }, 'Remove', 'Sure?', 'x');
 
+    // Collapsed by default: the header shows weight and reps(rir); tap it to expand.
+    const sum = h('div', { class: 'sum' });
+    const showSum = () => sum.replaceChildren(
+      h('span', {}, fmtW(x.weight), h('small', {}, ' lb')),
+      h('span', { class: 'r' }, x.reps + (x.rir == null ? '' : `(${x.rir})`)));
+    showSum();
+    const toggle = h('button', { class: 'tog', 'aria-label': 'Expand or collapse', 'aria-expanded': 'false' }, '›');
+    const head = h('div', { class: 'head' }, grip(d, el), name, sum, remove, toggle);
+    head.addEventListener('click', e => {
+      if (e.target.closest('.grip')) return;
+      const open = el.classList.contains('open');
+      if (open && !e.target.closest('.tog')) return;
+      if (open && el.contains(document.activeElement)) document.activeElement.blur();
+      el.classList.toggle('open', !open);
+      toggle.setAttribute('aria-expanded', String(!open));
+    });
+    if (view.open === x.id) { el.classList.add('open'); toggle.setAttribute('aria-expanded', 'true'); }
+
     el.append(
-      h('div', { class: 'head' }, grip(d, el), name, remove),
+      head,
+      h('div', { class: 'body' },
       h('div', { class: 'label' }, 'Weight'),
       h('div', { class: 'weight' }, wb(-5), wb(-2.5, true),
         h('div', { class: 'val' }, wIn, h('span', { class: 'unit' }, 'lb')),
@@ -389,7 +419,7 @@
         h('div', {}, h('div', { class: 'label' }, 'In reserve'),
           h('div', { class: 'count' },
             h('button', { class: 'step', 'aria-label': 'One fewer rep in reserve', onclick: () => setI(-1) }, '−'), iNum,
-            h('button', { class: 'step', 'aria-label': 'One more rep in reserve', onclick: () => setI(1) }, '+')))));
+            h('button', { class: 'step', 'aria-label': 'One more rep in reserve', onclick: () => setI(1) }, '+'))))));
     return el;
   }
 
@@ -406,9 +436,10 @@
       const name = raw.trim();
       if (!name) return;
       const prev = lastUse(name);
-      d.exercises.push({ id: uid(), name: prev ? prev.name.trim() : name, weight: prev ? prev.weight : 45, reps: prev ? prev.reps : 8, rir: null });
+      const nid = uid();
+      d.exercises.push({ id: nid, name: prev ? prev.name.trim() : name, weight: prev ? prev.weight : 45, reps: prev ? prev.reps : 8, rir: null });
       save();
-      go({ name: 'day', id: d.id });
+      go({ name: 'day', id: d.id, open: nid });
       window.scrollTo(0, document.body.scrollHeight);
     }
     function fill() {
