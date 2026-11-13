@@ -218,7 +218,7 @@
       ? days.map(d => h('button', { class: 'row', onclick: () => go({ name: 'day', id: d.id }) },
           h('div', { class: 'main' },
             h('div', { class: 't' }, weekday(d.date), h('span', {}, longDate(d.date))),
-            h('div', { class: 's' }, d.exercises.map(x => x.name).join(' · ') || 'No exercises')),
+            h('div', { class: 's' }, 'Fullbody')),
           h('div', { class: 'chev' }, '›')))
       : h('div', { class: 'empty' }, 'No entries yet. Log today to start.');
 
@@ -238,7 +238,13 @@
 
   function openToday() {
     let d = db.days.find(x => x.date === today());
-    if (!d) { d = { id: uid(), date: today(), exercises: [] }; db.days.push(d); save(); }
+    if (!d) {
+      // Start from a copy of the most recent earlier day, ready to edit.
+      const prev = sortedDays().find(x => x.date < today());
+      const exercises = prev ? prev.exercises.map(x => ({ ...x, id: uid() })) : [];
+      d = { id: uid(), date: today(), exercises };
+      db.days.push(d); save();
+    }
     go({ name: 'day', id: d.id });
   }
 
@@ -328,7 +334,7 @@
           h('div', { class: 'count' },
             h('button', { class: 'step', 'aria-label': 'One fewer rep', onclick: () => setR(x.reps - 1) }, '−'), rNum,
             h('button', { class: 'step', 'aria-label': 'One more rep', onclick: () => setR(x.reps + 1) }, '+'))),
-        h('div', {}, h('div', { class: 'label' }, 'In reserve', h('i', {}, 'optional')),
+        h('div', {}, h('div', { class: 'label' }, 'In reserve'),
           h('div', { class: 'count' },
             h('button', { class: 'step', 'aria-label': 'One fewer rep in reserve', onclick: () => setI(-1) }, '−'), iNum,
             h('button', { class: 'step', 'aria-label': 'One more rep in reserve', onclick: () => setI(1) }, '+')))));

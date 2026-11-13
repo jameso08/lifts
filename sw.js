@@ -3,7 +3,7 @@ const CACHE = 'lifts-v1';
 const FILES = ['./', 'index.html', 'manifest.webmanifest', 'icon-180.png', 'icon-512.png'];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES.map(f => new Request(f, { cache: 'reload' })))).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', e => {
@@ -19,7 +19,8 @@ self.addEventListener('fetch', e => {
   e.respondWith(
     caches.open(CACHE).then(async cache => {
       const hit = await cache.match(e.request, { ignoreSearch: true });
-      const fresh = fetch(e.request).then(res => {
+      // 'no-cache' revalidates with the server so app updates are not held back by the browser's HTTP cache.
+      const fresh = fetch(e.request.url, { cache: 'no-cache' }).then(res => {
         if (res.ok) cache.put(e.request, res.clone());
         return res;
       });
